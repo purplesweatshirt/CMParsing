@@ -5,6 +5,79 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+import os
+import cv2
+import json
+from math import inf
+import matplotlib.pyplot as plt
+
+def find_keypoints(lst):
+    lst = set([(item[0], item[1]) for item in lst])
+    upper, lower, left, right = [], [], [], []
+    curr_upper, curr_lower, curr_l, curr_r = inf, 0, inf, 0
+    for point in lst:
+        # Upper
+        if point[1] < curr_upper:
+            curr_upper = point[1]
+            upper = [point[0], point[1]]
+        # Lower
+        if point[1] > curr_lower:
+            curr_lower = point[1]
+            lower = [point[0], point[1]]
+        # Left
+        if point[0] < curr_l:
+            curr_l = point[0]
+            left = [point[0], point[1]]
+        # Right
+        if point[0] > curr_r:
+            curr_r = point[0]
+            right = [point[0], point[1]]
+    if left[0] in [upper[0]]+[lower[0]]:        
+        return [upper] + [lower] + [right]
+    else:
+        return [upper] + [lower] + [left]
+
+
+def get_bounding_box(node_obj, img_h):
+
+    if node_obj['shape'] == 'plaintext':
+        if not 'fill_color' in node_obj.keys():
+            point = [float(coord) for coord in node_obj['pos'].split(',')]
+            x, y = point[0], point[1]
+            height = node_obj['_ldraw_'][0]['size']
+            width = node_obj['_ldraw_'][2]['width']
+            x, y, w, h = (4/3)*(x + 4), (4/3)*(y + 4), width, height
+            x1, y1, x2, y2 = int(x - w), img_h - int(y - h), int(x + w), img_h - int(y + h)
+        elif node_obj['fillcolor'] == '#FFFFFF':
+            point = [float(coord) for coord in node_obj['pos'].split(',')]
+            x, y = point[0], point[1]
+            height = node_obj['_ldraw_'][0]['size']
+            width = node_obj['_ldraw_'][2]['width']
+            x, y, w, h = (4/3)*(x + 4), (4/3)*(y + 4), width, height
+            x1, y1, x2, y2 = int(x - w), img_h - int(y - h), int(x + w), img_h - int(y + h)
+        else:
+            points = node_obj['_draw_'][-1]['points']
+            xs, ys = [point[0] for point in points], [point[1] for point in points]
+            x1, y1, x2, y2 = (4/3)*(min(xs) + 4), (4/3)*(min(ys) + 4), (4/3)*(max(xs) + 4), (4/3)*(max(ys) + 4) 
+            x1, y1, x2, y2 = int(x1), img_h - int(y1), int(x2), img_h - int(y2)
+        return x1, y1, x2, y2
+    elif node_obj['shape'] in ['box', 'diamond', 'rectangle', 'square']:
+        if node_obj['shape'] == 'box':
+            points = node_obj['_draw_'][-1]['points']
+        elif node_obj['shape'] in ['diamond', 'rectangle', 'square']:
+            points = node_obj['_draw_'][-1]['points']
+        xs, ys = [point[0] for point in points], [point[1] for point in points]
+        x1, y1, x2, y2 = (4/3)*(min(xs) + 4), (4/3)*(min(ys) + 4), (4/3)*(max(xs) + 4), (4/3)*(max(ys) + 4) 
+        return int(x1), img_h - int(y1), int(x2), img_h - int(y2)
+    elif node_obj['shape'] in ['ellipse', 'doublecircle', 'circle', 'oval']:
+        if node_obj['shape'] in ['ellipse', 'circle', 'oval']:
+            points = node_obj['_draw_'][-1]['rect']
+        elif node_obj['shape'] == 'doublecircle':
+            points = node_obj['_draw_'][-1]['rect']
+        x, y, w, h = (4/3)*(points[0] + 4), (4/3)*(points[1] + 4), (4/3)*(points[2]), (4/3)*(points[3])
+        x1, y1, x2, y2 = int(x - w), img_h - int(y - h), int(x + w), img_h - int(y + h)
+        return x1, y1, x2, y2
+
 def eucl_dist2d(x, y):
     return ((y[0] - x[0])**2 + (y[1] - x[1])**2)**0.5
 
@@ -62,7 +135,7 @@ def generate_annotations(path2json, path2img, display=True):
     img = cv2.imread(path2img)
     img_name = path2img.split('/')[-1]
     an_name = img_name[:-3] + 'json'
-    save_path = f"/content/gdrive/MyDrive/SEMNET/fake_generator/data/seg_annots/{an_name}"
+    save_path = f"seg_annots/{an_name}"
     if 'splines' in json_file.keys():
         splines = json_file['splines']
     else:
@@ -245,9 +318,15 @@ def generate_annotations(path2json, path2img, display=True):
                                 size_ind = ind
                         w = edge['_ldraw_'][width_ind]['width']
                         h = edge['_ldraw_'][size_ind]['size']
-                        x1, y1, x2, y2 = int(x - w), int(y - h), int(x + w), int(y + h)
-                        img = cv2.rectangle(img, [x1, y1], [x2, y2], 
-                                            (0, 255, 255), 2)
+                        if " " in edge_weight:
+                            x1, y1, x2, y2 = int(x - w), int(y - 2*h), int(x + w), int(y + 2*h)
+                            img = cv2.rectangle(img, [x1, y1], [x2, y2], 
+                                                (0, 255, 255), 2)
+                        else:
+                            x1, y1, x2, y2 = int(x - w), int(y - h), int(x + w), int(y + h)
+                            img = cv2.rectangle(img, [x1, y1], [x2, y2], 
+                                                (0, 255, 255), 2)
+                            
                         annots['masks'].append([x1, y1, x2, y2])
                         annots['bboxes'].append([x1, y1, x2, y2])
                         annots['labels'].append('weight')
