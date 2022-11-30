@@ -14,11 +14,11 @@ class SEMGenerator:
         self.amount_obs_vars = [len(ovs) for ovs in self.obs_vars]
         self.n2 = len(list(itertools.combinations(self.latent_variables, 2)))
         self.n1 = len(self.latent_variables)
-        self.lv_edges = self._edge_directions(random.sample(list(itertools.combinations(self.latent_variables, 2)), random.randint(self.n1//2, self.n2-1))) if self.n2 > 2 else self._edge_directions([[self.latent_variables[0], self.latent_variables[1]]])
-        #if len(latent_variables) >= 2:
-        #    self.lv_edges = self._edge_directions()
-        #else:
-        #    self.lv_edges = []
+        #self.lv_edges = self._edge_directions(random.sample(list(itertools.combinations(self.latent_variables, 2)), random.randint(self.n1//2, self.n2-1))) if self.n2 > 2 else self._edge_directions([[self.latent_variables[0], self.latent_variables[1]]])
+        if len(latent_variables) >= 2:
+            self.lv_edges = self._edge_directions()
+        else:
+            self.lv_edges = []
         self.item_edges = item_edges
         self.words = scfg.WORDS.split()
         if self.item_edges:
