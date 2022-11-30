@@ -10,7 +10,7 @@ Install the `cv2`, `bezier` and `graphviz` libraries by running the following to
 	
 	pip install bezier 
 	pip install graphviz==0.20
-    	pip install opencv-python
+	pip install opencv-python
 
 
 ## Tutorial
