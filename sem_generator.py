@@ -1,14 +1,7 @@
-import os
-import cv2
-import json
-import pickle
 import random
 import graphviz
 import itertools
-import pandas as pd
 import setup_config as scfg
-import matplotlib.pyplot as plt
-from utils import find_keypoints, get_bounding_box
 
 
 class SEMGenerator:
@@ -954,94 +947,6 @@ class SEMGenerator:
                             </tr>
                         </table>>'''
         return label
-
-    def generate_annotations(self, path2json, display=False):
-
-        path2txt = path2json[:-4] + 'txt'
-
-        with open(path2json) as file:
-            json_file = json.load(file)
-
-        annot_file = open(path2txt, 'w')
-
-        img = cv2.imread(path2json[:-4] + 'png')
-
-        for node in json_file['objects']:
-            if 'cluster_' in node['name']:
-                continue
-            else:
-                #print(node)
-                node_name = node['label']
-                node_class = node['name'].split('_')[-1]
-                
-                node_name = node['_ldraw_'][2]['text']
-                x1, y1, x2, y2 = get_bounding_box(node, cv2.imread(path2json[:-4] + 'png').shape[0])
-                annot_file.write(f'{node_class.upper()}, {node_name}, {x1}, {y1}, {x2}, {y2}' + '\n')
-                
-                if display:
-                    print(f'{node_class.upper()}, {node_name}, {x1}, {y1}, {x2}, {y2}')
-                    img = cv2.circle(img, (x1, y1), 0, (255, 255, 0))
-                    img = cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 1)
-
-
-        for edge in json_file['edges']:
-
-            points = edge['_draw_'][-1]['points']
-            points_hdraw = edge['_hdraw_'][-1]['points']
-            points_rescaled = [[int((4/3)*(point[0] + 4)), img.shape[0] - int((4/3)*(point[1] + 4))] for point in points]
-            points_hdraw = [[int((4/3)*(point[0] + 4)), img.shape[0] - int((4/3)*(point[1] + 4))] for point in points_hdraw]
-            points_hdraw = find_keypoints(points_hdraw)
-            # If it's a bidirectional edge:
-            try:
-                points_tdraw = edge['_tdraw_'][-1]['points']
-                points_tdraw = [[int((4/3)*(point[0] + 4)), img.shape[0] - int((4/3)*(point[1] + 4))] for point in points_tdraw]
-                points_tdraw = find_keypoints(points_tdraw)
-            except KeyError:
-                points_tdraw = []
-            
-            if edge['label']:
-                edge_weight = edge['_ldraw_'][-1]['text']
-                point = [float(coord) for coord in edge['lp'].split(',')]
-                x, y = int((4/3)*(point[0] + 4)), img.shape[0] - int((4/3)*(point[1] + 4))
-                for ind, dct in enumerate(edge['_ldraw_']):
-                    if 'width' in dct.keys():
-                        width_ind = ind
-                    elif 'size' in dct.keys():
-                        size_ind = ind
-                w = edge['_ldraw_'][width_ind]['width']
-                h = edge['_ldraw_'][size_ind]['size']
-                x1, y1, x2, y2 = int(x - w), int(y - h), int(x + w), int(y + h)
-                annot_file.write(f'WEIGHT, {edge_weight}, {x1}, {y1}, {x2}, {y2}' + '\n')
-                
-                if display:
-                    img = cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 1)
-                    print(f'WEIGHT, {edge_weight}, {x1}, {y1}, {x2}, {y2}')
-            else:
-                edge_weight = ''
-
-            if points_tdraw:
-                points = [f'{point[0]}, {point[1]}' for point in points_hdraw + points_tdraw]
-                annot_file.write(f'EDGE, {edge_weight}, {", ".join(points)}' + '\n')
-
-                if display:
-                    print(f'EDGE, {edge_weight}, {", ".join(points)}')
-                    for point in points_hdraw + points_tdraw:
-                        img = cv2.circle(img, (point[0], point[1]), radius=0, color=(50, 255, 150), thickness=10)
-            else:
-                points = [f'{point[0]}, {point[1]}' for point in [points_rescaled[0]] + points_hdraw]
-                annot_file.write(f'EDGE, {edge_weight}, {", ".join(points)}' + '\n')
-                
-                if display:
-                    print(f'EDGE, {edge_weight}, {", ".join(points)}')
-                    for point in [points_rescaled[0]] + points_hdraw:
-                        img = cv2.circle(img, (point[0], point[1]), radius=0, color=(50, 255, 150), thickness=10)
-
-        annot_file.close()
-        
-        if display:
-            plt.imshow(img)
-            plt.show()
-
 
     def _edge_directions(self):
         if self.n2 > 2: 
