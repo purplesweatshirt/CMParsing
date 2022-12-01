@@ -59,7 +59,7 @@ def augment_background(path2imgs, path2bgs, copy_files=False, display=True):
 
             if display:
                 plt.figure(figsize=(20, 20))
-                plt.imshow(noisy_img)
+                plt.imshow(noisy_img, cmap='gray')
                 plt.show()
 
             if copy_files:
