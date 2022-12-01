@@ -50,7 +50,7 @@ def augment_background(path2imgs, path2bgs, copy_files=False, display=True):
 
         if (not "aug" in file_name) and (file_name.endswith("png")):
             path2file = os.path.join(path2imgs, file_name)
-            background_file = random.choice(os.listdir(path2bgs))
+            background_file = random.choice([f for f in os.listdir(path2bgs) if f[-3:] in ['png', 'jpg']])
             path2background = os.path.join(path2bgs, background_file)
             img1, img2 = cv2.imread(path2file, cv2.IMREAD_GRAYSCALE), cv2.imread(path2background, cv2.IMREAD_GRAYSCALE)
             noisy_img = merge_images(img1, img2)
